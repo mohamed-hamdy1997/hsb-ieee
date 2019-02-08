@@ -1,56 +1,32 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\AuthApi;
 
 use App\Ex_com_options;
 use App\HighBoardOptions;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
+//use App\Http\Controllers\Controller;
+use App\Http\Controllers\Controller as Controller;
 use App\Http\Requests;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Facades\JWTFactory;
 use JWTAuthException;
 use App\User;
-use App\Post;
 use Illuminate\Support\Facades\Auth;
 
-class AuthController extends Controller
+class RegisterController extends Controller
 {
 protected $user;
     public function __construct(User $user)
     {
         $this->user = $user;
     }
-    
-    public function login(Request $request){
-        $credentials = $request->only('email', 'password');
-        $token = null;
-        try {
-            if (!$token = JWTAuth::attempt($credentials)) {
-                return response()->json([
-                    'response' => 'error',
-                    'message' => 'invalid_email_or_password',
-                ]);
-            }
-        } catch (JWTAuthException $e) {
-            return response()->json([
-                'response' => 'error',
-                'message' => 'failed_to_create_token',
-            ]);
-        }
-        return response()->json([
-            'response' => 'success',
-            'result' => [
-                'token' => $token,
-
-
-                
-            ],
-        ]);
-    }
 
     public function register(Request $request)
     {
+        $req = $request;
         $this->validate($request ,[
             'firstName' => 'required |string | max:50 | min:5',
             'lastName' => 'required |string | max:50 | min:5',
@@ -68,6 +44,8 @@ protected $user;
         if ($request->input('position')=='highBoard'&& ($request->input('committee')=='RAS' || 'PES' || 'WIE'))
         {$this->validate($request, ['highBoardOptions' => 'required']);}
 
+        $confirmation_code = str_random(30);
+
         $user= new User();
         $user->firstName= $request->input('firstName');
         $user->lastName= $request->input('lastName');
@@ -76,6 +54,7 @@ protected $user;
         $user->DOB= $request->input('DOB');
         $user->position= $request->input('position');
         $user->email=$request->input('email');
+        $user->confirmation_code  = $confirmation_code ;
         $user->password=app('hash')->make($request->input('password'));
 
         if ($request->input('position')=='EX_com'){
@@ -83,7 +62,7 @@ protected $user;
             $ex->ex_options = $request->input('ex_options');
             if ($ex->ex_options!=null){
                 $user->save();
-                $ex->ex_id = $user->id;
+                $ex->user_id = $user->id;
                 $ex->save();
             }else{return response()->json('error');}
         }
@@ -97,37 +76,50 @@ protected $user;
             $hb->HB_options = $request->input('highBoardOptions');
             if ($hb->HB_options != null){
                 $user->save();
-                $hb->HB_id = $user->id;
+                $hb->user_id = $user->id;
                 $hb->save();
             }else{return response()->json('error');}
         }
 
-        if ($request->input('position')!='EX_com'){$user->save();}
+        if ($request->input('position')!='EX_com' && ($request->input('position')=='highBoard' && ($request->input('committee')==('RAS'||'PES' || 'WIE') )))
+        {
+            $user->save();
+        }
+
+//        send activation email
+        Mail::send('/emails.verify', compact(['user','confirmation_code']), function($message) use ($req) {
+            $message->to($this->MailTarget($req), 'user')->subject('Verify your email address');
+        });
 
            return response()->json(['status' =>'success','user'=>$user]);
         }
 
-//        Logout
-    public function logout(Request $request)
-    {
-        $this->validate($request, [
-            'token' => 'required'
-        ]);
 
-        try {
-            JWTAuth::invalidate($request->token);
+//        mail target
+        public function MailTarget(Request $request)
+        {
+            $email = 'mhmdy4554@gmail.com';
 
-            return response()->json([
-                'success' => true,
-                'message' => 'User logged out successfully'
-            ]);
-        } catch (JWTException $exception) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Sorry, the user cannot be logged out'
-            ], 500);
+//            if Ex-com register
+            if ($request->input( 'position')=='EX_com' && ($request->input('ex_options')!='Chairperson') ){
+                $ex = Ex_com_options::where('ex_options','Chairperson' )->first();
+                $user = User::findOrFail($ex->user_id);
+                $email = $user->email;
+            }
+
+////            if high board register
+//            if ($request->input( 'position')=='highBoard' && ($request->input('committee')!='Chairperson') ){
+//                $ex = Ex_com_options::where('ex_options','Chairperson' )->first();
+//                $user = User::findOrFail($ex->user_id);
+//                $email = $user->email;
+//            }
+
+
+            return $email;
+
+
         }
-    }
+
 
  }
         

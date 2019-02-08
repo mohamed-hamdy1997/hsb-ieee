@@ -33,10 +33,10 @@ class User extends Authenticatable
     ];
 
     public function ex_com_option(){
-        return$this->hasOne('App/Ex_com_options');
+        return$this->hasOne(Ex_com_options::class);
     }
 
-    public function high_board_options(){
-        return$this->hasOne('App/HighBoardOptions');
+    public function high_board_option(){
+        return$this->hasOne(HighBoardOptions::class);
     }
 }

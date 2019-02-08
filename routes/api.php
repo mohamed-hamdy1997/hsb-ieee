@@ -1,11 +1,15 @@
 <?php
 
 use Illuminate\Http\Request;
-use Illuminate\Http\Controllers;
 
         //login & register
-Route::POST('login', 'AuthController@login');
+Route::POST('login', 'ِِِAuthApi/AuthController@login');
 
-Route::POST('logout', 'AuthController@logout');
+Route::POST('logout', 'ِِِAuthApi/AuthController@logout');
 
-Route::post('register', 'AuthController@register');
+Route::Post('register', 'AuthApi\RegisterController@register');
+
+Route::get('register/verify/{confirmationCode}' ,  'AuthApi\ConfirmController@confirm');
+
+
+

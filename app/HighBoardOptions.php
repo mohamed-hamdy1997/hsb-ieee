@@ -11,6 +11,6 @@ class HighBoardOptions extends Model
     public $updated_at=false;
 
     public function user(){
-        return$this->belongsTo('App/User');
+        return$this->belongsTo(User::class);
     }
 }
