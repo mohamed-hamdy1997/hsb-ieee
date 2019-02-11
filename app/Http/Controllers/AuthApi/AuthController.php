@@ -27,6 +27,9 @@ protected $user;
     public function login(Request $request){
         $credentials = $request->only('email', 'password');
         $token = null;
+        if ($request['rememberme']) {
+            config(['jwt.ttl' => env('TOKEN_TTL_REMEMBER_ME',  86400 * 30)]); // 30 days
+        }
         try {
             if (!$token = JWTAuth::attempt($credentials)) {
                 return response()->json([
